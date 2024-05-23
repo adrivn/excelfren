@@ -1,0 +1,4 @@
+{
+  "field_1": {"regex": "<usar expresiones regulares en este campo, dentro de las comillas>", "offset_y": -1, "offset_x": 0},
+  "field_2": {"regex": "<usar expresiones regulares en este campo, dentro de las comillas>", "offset_y": 0, "offset_x": 2},
+}
