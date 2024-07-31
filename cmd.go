@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/csv"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/rs/zerolog"
 	"github.com/urfave/cli/v2"
+	"github.com/xuri/excelize/v2"
 )
 
 var (
@@ -86,6 +88,66 @@ var (
 				}
 			}
 
+			return nil
+		},
+	}
+	CountFiles = cli.Command{
+		Name:    "count",
+		Aliases: []string{"c"},
+		Action: func(c *cli.Context) error {
+			offersBaseDir := os.Getenv("OFFERS_BASE_DIR")
+			dirPath := filepath.Clean(offersBaseDir)
+			results, _ := countExcelFiles(dirPath)
+			for _, v := range results {
+				fmt.Println(v)
+			}
+			return nil
+		},
+	}
+	CountAndListFiles = cli.Command{
+		Name:    "count-and-list",
+		Aliases: []string{"cl"},
+		Action: func(c *cli.Context) error {
+			offersBaseDir := os.Getenv("OFFERS_BASE_DIR")
+			dirPath := filepath.Clean(offersBaseDir)
+			files, _ := collectExcelFiles(dirPath)
+			csvFile, err := os.Create("files.csv")
+			if err != nil {
+				logger.Fatal().Err(err).Msg("failed creating file")
+			}
+			defer csvFile.Close()
+			csvwriter := csv.NewWriter(csvFile)
+			defer csvwriter.Flush()
+			var data [][]string
+			for _, v := range files {
+				row := []string{v}
+				data = append(data, row)
+			}
+			csvwriter.WriteAll(data)
+			return nil
+		},
+	}
+	ReadSheetTest = cli.Command{
+		Name:    "test",
+		Aliases: []string{"t"},
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:     "file",
+				Usage:    "Ruta del archivo Excel",
+				Required: true,
+			},
+		},
+		Action: func(c *cli.Context) error {
+			fichero, err := excelize.OpenFile(c.String("file"))
+			if err != nil {
+				logger.Error().Err(err).Msg("error al abrir fichero")
+			}
+			ficha, err := findSheetByRegex(fichero, "(?i)FICHA")
+			if err != nil {
+				logger.Error().Err(err).Msg("error al encontrar ficha")
+			}
+
+			logger.Info().Msg(ficha)
 			return nil
 		},
 	}
@@ -235,9 +297,12 @@ func createCLI() *cli.App {
 	app.Name = "Excel Processor"
 	app.Usage = "Procesa archivos Excel para extraer datos basados en configuraciones JSON"
 	app.Commands = []*cli.Command{
+		&CountFiles,
+		&CountAndListFiles,
 		&ReadFiles,
 		&GetNewFiles,
 		&DiffFiles,
+		&ReadSheetTest,
 	}
 	return app
 }

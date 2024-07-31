@@ -68,14 +68,18 @@ func processFile(filePath string, fieldConfigs map[string]FieldConfig) (Output, 
 	var uniqueIDs []string
 
 	// Buscar hojas que coincidan con las expresiones regulares
-	fichaSheet, err := findSheetByRegex(f, "(?i)FICHA")
+	fichaSheet, err := findSheetByRegex(f, "(?i)^FICHA$")
 	if err != nil {
 		return output, fmt.Errorf("no se pudo encontrar la hoja de FICHA: %v", err)
 	}
 
-	sapSheet, err := findSheetByRegex(f, "(?i)SAP")
+	sapSheet, err := findSheetByRegex(f, "(?i)^SAP$")
 	if err != nil {
-		return output, fmt.Errorf("no se pudo encontrar la hoja de SAP: %v", err)
+		sapSheet, err = findSheetByRegex(f, "(?i)^OFERTA$")
+		if err != nil {
+			return output, fmt.Errorf("no se pudo encontrar la hoja de SAP u OFERTA: %v", err)
+			// logger.Error().Err(fmt.Errorf("no se pudo encontrar la hoja de SAP: %v", err))
+		}
 	}
 
 	// Procesar datos de la hoja FICHA
@@ -217,6 +221,39 @@ func findUniqueValues(f *excelize.File, sheetName, regex string) ([]string, erro
 	}
 
 	return uniqueValues, nil
+}
+
+// collectExcelFiles recursively finds all .xlsx files in the provided directory.
+func countExcelFiles(root string) ([]string, error) {
+	var results []string
+	var x_files int
+	var m_files int
+	var s_files int
+	var d_files int
+	logger.Info().Str("root folder", root).Msg("Analizando carpeta raíz en busca de ficheros Excel...")
+	err := filepath.Walk(root, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+		if !info.IsDir() && !strings.HasPrefix(info.Name(), "~") {
+			switch filepath.Ext(info.Name()) {
+			case ".xlsx":
+				x_files += 1
+			case ".xlsm":
+				m_files += 1
+			case ".xls":
+				s_files += 1
+			default:
+				d_files += 1
+			}
+		}
+		return nil
+	})
+	results = append(results, fmt.Sprintf("xlsx files total count: %d", x_files))
+	results = append(results, fmt.Sprintf("xlsm files total count: %d", m_files))
+	results = append(results, fmt.Sprintf("xls files total count: %d", s_files))
+	results = append(results, fmt.Sprintf("rest of the files total count: %d", d_files))
+	return results, err
 }
 
 // collectExcelFiles recursively finds all .xlsx files in the provided directory.
