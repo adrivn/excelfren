@@ -261,9 +261,12 @@ var (
 				}
 
 				fmt.Printf("Se encontraron %d archivos Excel en el directorio %s\n", len(excelFiles), dirPath)
+				if maxFiles != 0 {
+					fmt.Printf("Se analizarán únicamente %d ficheros.", maxFiles)
+				}
 
 				for i, path := range excelFiles {
-					logger.Info().Int("current_count", i+1).Int("max_count", maxFiles).Int("total_count", len(excelFiles)).Str("search_path", path).Msg("Procesando archivo...")
+					logger.Info().Int("current_count", i+1).Int("total_count", len(excelFiles)).Str("file_name", filepath.Base(path)).Msg("Procesando archivo...")
 					output, err := processFile(path, fieldConfigs)
 					if err != nil {
 						logger.Error().Str("path", path).Err(err).Msg("Error processing file")
